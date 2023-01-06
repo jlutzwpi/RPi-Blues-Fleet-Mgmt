@@ -1,6 +1,6 @@
 # RPi-Blues-Fleet-Mgmt
 
-Determine driver of vehicle, if they are wearing a seatbelt, and speed and location information.
+Determine driver of vehicle, if they are wearing a seatbelt, if they've been drinking alcohol, and speed and location information.
 
 To run: python3 rpi-blues-fleet.py model_name.eim [/dev/video0 | video-file.mp4]
 
