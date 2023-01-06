@@ -54,6 +54,14 @@ print(rsp)
 #take an average of the seatbelt inference
 avg_seatbelt = []
 gps_found = False
+#set up alcohol sensor
+COLLECT_NUMBER   = 1               # collect number, the collection range is 1-100
+I2C_MODE         = 0x01            # default use I2C1
+#confirmed with i2cdetect that I2C address is 0x75, which is ALCOHOL_ADDRESS_3
+alcohol = DFRobot_Alcohol_I2C (I2C_MODE, ALCOHOL_ADDRESS_3)
+alcohol.set_mode(MEASURE_MODE_AUTOMATIC)
+#similar to seatbelt, keep running average of alcohol detection
+avg_alcohol = []
 
 runner = None
 # if you don't want to see a video preview, set this to False
@@ -166,6 +174,16 @@ def main(argv):
                     #keep a list of seatbelt readings to calculate average
                     global avg_seatbelt
                     avg_seatbelt.append(seatbelt)
+                    global alcohol
+                    #get the alcohol concentration reading from the DFRobot MQ3 sensor
+                    alcohol_concentration = alcohol.get_alcohol_data(COLLECT_NUMBER);
+                    if alcohol_concentration == ERROR:
+                        print("Please check the connection !")
+                    else:
+                        print("\n*** alcohol concentration is %.2f PPM.\n"%alcohol_concentration)
+                        #add to list
+                        global avg_alcohol
+                        avg_alcohol.append(alcohol_concentration)
                     #only send data every 2 minutes
                     # number of seconds elapsed modulo 120 should be < 1
                     if sec % TIME_SLEEP < 1.0:
@@ -177,10 +195,16 @@ def main(argv):
                             sb = 1
                         # empty list and start over
                         avg_seatbelt.clear()
-                        #prepare and send note
+                        #do the same for alcohol
+                        avg = sum(avg_alcohol) / len(avg_alcohol)
+                        alc = 0
+                        #if alcohol avg is > 0.6 ppm then flag it
+                        if avg > 0.6:
+                            alc = 1
+                        avg_alcohol.clear()
                         req = {"req": "note.add"}
                         req["file"] = "sensors.qo"
-                        req["body"] = { "faceID": face_id, "confidence": conf, "seatbelt": sb }
+                        req["body"] = { "faceID": face_id, "confidence": conf, "seatbelt": sb, "alcohol_detected": alc }
                         rsp = card.Transaction(req)
                         print(rsp)
                         print("Note sent!")
