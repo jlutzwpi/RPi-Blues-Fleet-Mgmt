@@ -13,6 +13,12 @@ import notecard
 from periphery import I2C
 import time
 from edge_impulse_linux.image import ImageImpulseRunner
+from DFRobot_Alcohol import *
+from LIS3DHTR import LIS3DHTR
+#define the accelerometer
+lis3dhtr = LIS3DHTR()
+num_hard_accel = 0
+num_hard_brake = 0
 
 # Blues Wireless Product ID
 productUID = "xxxxxx"
@@ -184,6 +190,16 @@ def main(argv):
                         #add to list
                         global avg_alcohol
                         avg_alcohol.append(alcohol_concentration)
+                    #get accel data to check for aggressive driving
+                    lis3dhtr.select_datarate()
+                    lis3dhtr.select_data_config()
+                    accl = lis3dhtr.read_accl()
+                    global num_hard_accel
+                    if accl['y'] > 10000:
+                        num_hard_accel = num_hard_accel + 1
+                    global num_hard_brake
+                    if accl['y'] < 0:
+                        num_hard_brake = num_hard_brake + 1
                     #only send data every 2 minutes
                     # number of seconds elapsed modulo 120 should be < 1
                     if sec % TIME_SLEEP < 1.0:
@@ -204,7 +220,9 @@ def main(argv):
                         avg_alcohol.clear()
                         req = {"req": "note.add"}
                         req["file"] = "sensors.qo"
-                        req["body"] = { "faceID": face_id, "confidence": conf, "seatbelt": sb, "alcohol_detected": alc }
+                        req["body"] = { "faceID": face_id, "confidence": conf, "seatbelt": sb, 
+                                        "alcohol_detected": alc, "num_hard_accel" : num_hard_accel,
+                                        "num_hard_brake" : num_hard_brake }
                         rsp = card.Transaction(req)
                         print(rsp)
                         print("Note sent!")
